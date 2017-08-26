@@ -20,7 +20,10 @@ struct Node {
 	Node() { ls = rs = NULL; }
 }pool[MAXN], *st[MAXN], *root, *fa;
 Node *newnode(int v) {
-	Node *cur = &*st[cnt++];
+	if(st[cnt] == NULL) {
+		st[cnt] = &pool[cnt];
+	}
+	Node *cur = st[cnt++];
 	cur->size = 1; cur->val = v;
 	cur->ls = cur->rs = NULL;
 	return cur;
@@ -112,10 +115,10 @@ int find(Node *cur, int x) {
 		return find(cur->ls, x);
 	}
 }
+void clear() {
+	while(cnt) st[cnt--] = NULL;
+}
 int main() {
-	for(int i = 0; i < MAXN; i++) {
-		st[i] = &pool[i];
-	}
 	root = newnode(2147483647);
 	int n; scanf("%d", &n);
 	for(int i = 1; i <= n; i++) {
