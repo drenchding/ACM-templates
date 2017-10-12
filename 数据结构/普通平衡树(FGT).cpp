@@ -1,141 +1,97 @@
-//bzoj3224
-//普通平衡树
-//第一行一个数n, 表示有n个操作
-//接下来n行, 每行一个操作:
-//1 x 插入x
-//2 x 删除x
-//3 x 查询x的排名
-//4 x 查询排名为x的数
-//5 x 求x的前驱
-//6 x 求x的后继
 #include <cstdio>
 #include <iostream>
+
 using namespace std;
-const int MAXN = 200005;
-const int ratio = 5;
-int n, cnt;
+
+const int MAXN = 100005;
+
+#define ls ch[0]
+#define rs ch[1]
+#define newNode(v, s, l, r) segNode < MAXN ? &(pool[segNode++] = Node(v, s, l, r)) : new Node(v, s, l, r)
+
+int segNode;
+
+struct Node *pool, *null, *root;
 struct Node {
-  int size, val;
-  Node *ls, *rs;
-  Node() { ls = rs = NULL; }
-}pool[MAXN], *st[MAXN], *root, *fa;
-Node *newnode(int v) {
-  if(st[cnt] == NULL) {
-    st[cnt] = &pool[cnt];
+  int val, size;
+  Node *ch[2];
+  Node(): val(0), size(0) {
+    ch[0] = ch[1] = null;
   }
-  Node *cur = st[cnt++];
-  cur->size = 1; cur->val = v;
-  cur->ls = cur->rs = NULL;
-  return cur;
-}
-void update(Node *cur) {
-  if(cur->ls != NULL) {
-    cur->size = cur->ls->size + cur->rs->size;
-    cur->val = cur->rs->val;
+  Node(int v, int s, Node *l, Node *r): val(v), size(s) {
+    ch[0] = l, ch[1] = r;
   }
-}
-Node *merge(Node *l, Node *r) {
-  Node *cur = newnode(0);
-  cur->ls = l; cur->rs = r;
-  update(cur); return cur;
-}
-void rotate(Node *cur, bool flag) {
-  if(flag) {
-    cur->ls = merge(cur->ls, cur->rs->ls);
-    st[--cnt] = cur->rs;
-    cur->rs = cur->rs->rs;
-  } else {
-    cur->rs = merge(cur->ls->rs, cur->rs);
-    st[--cnt] = cur->ls;
-    cur->ls = cur->ls->ls;
-  }
-}
-void maintain(Node *cur) {
-  if(cur->ls == NULL) {
-    return;
-  }
-  if(cur->ls->size > cur->rs->size * ratio) {
-    rotate(cur, 0);
-  } else if(cur->rs->size > cur->ls->size * ratio) {
-    rotate(cur, 1);
-  }
-  if(cur->ls->size > cur->rs->size * ratio) {
-    rotate(cur->ls, 1); rotate(cur, 0);
-  } else if(cur->rs->size > cur->ls->size * ratio) {
-    rotate(cur->rs, 0); rotate(cur, 1);
-  }
-}
-void insert(Node *cur, int x) {
-  if(cur->size == 1) {
-    cur->ls = newnode(min(x, cur->val));
-    cur->rs = newnode(max(x, cur->val));
-    update(cur); return;
-  }
-  if(x > cur->ls->val) {
-    insert(cur->rs, x);
-  } else {
-    insert(cur->ls, x);
-  }
-  maintain(cur); update(cur);
-}
-void erase(Node *cur, int x) {
-  if(cur->size == 1) {
-    if(fa->ls == cur) {
-      *fa = *fa->rs;
-    } else {
-      *fa = *fa->ls;
-    }
-  } else {
-    fa = cur;
-    if(x > cur->ls->val) {
-      erase(cur->rs, x);
-    } else {
-      erase(cur->ls, x);
+  void pushup() {
+    if(ls->size && rs->size) {
+      size = ls->size + rs->size;
+      val = max(ls->val, rs->val);
     }
   }
-  maintain(cur); update(cur);
-}
-int rnk(Node *cur, int x) {
+  void maintain() { 
+    if(ls->size && rs->size) {
+      for(int d = 0; d < 2; d++) {
+        if(ch[d]->size > ch[d^1]->size * 4) {
+          ch[d^1] = newNode(0, 1, ch[d]->ch[d^1], ch[d^1]);
+          ch[d] = ch[d]->ch[d], ch[d^1]->pushup();
+          if(d) swap(ch[d^1]->ch[d], ch[d^1]->ch[d^1]);
+        }
+      }
+    }
+  }
+}mem[MAXN];
+
+void insert(Node *cur, int v) {
   if(cur->size == 1) {
-    return 1;
-  }
-  if(x > cur->ls->val) {
-    return rnk(cur->rs, x) + cur->ls->size;
+    cur->ls = newNode(min(cur->val, v), 1, null, null);
+    cur->rs = newNode(max(cur->val, v), 1, null, null);
   } else {
-    return rnk(cur->ls, x);
+    insert(cur->ch[v > cur->ls->val], v);
   }
+  cur->pushup(), cur->maintain();
 }
-int find(Node *cur, int x) {
+
+void erase(Node *cur, int v, Node *fa = null) {
   if(cur->size == 1) {
-    return cur->val;
-  }
-  if(x > cur->ls->size) {
-    return find(cur->rs, x - cur->ls->size);
+    *fa = fa->ls == cur ? *fa->rs : *fa->ls;
   } else {
-    return find(cur->ls, x);
+    erase(cur->ch[v > cur->ls->val], v, cur);
+    cur->pushup(), cur->maintain();
   }
 }
-void clear() {
-  while(cnt) st[cnt--] = NULL;
+
+int kth(Node *cur, int k) {
+  if(cur->size == k) return cur->val;
+  else {
+    int d = k > cur->ls->size;
+    return kth(cur->ch[d], d ? k - cur->ls->size : k);
+  }
 }
+
+int rnk(Node *cur, int v) {
+  if(cur->size == 1) return 1;
+  else {
+    int d = v > cur->ls->val;
+    return rnk(cur->ch[d], v) + (d ? cur->ls->size : 0);
+  }
+}
+
+void init() {
+  segNode = 0, pool = mem;
+  null = newNode(0, 0, NULL, NULL);
+  root = newNode(2147483647, 1, null, null);
+}
+
 int main() {
-  root = newnode(2147483647);
+  init();
   int n; scanf("%d", &n);
-  for(int i = 1; i <= n; i++) {
+  while(n--) {
     int s, a; scanf("%d %d", &s, &a);
-    if(s == 1) {
-      insert(root, a);
-    } else if(s == 2) {
-      erase(root, a);
-    } else if(s == 3) {
-      printf("%d\n", rnk(root, a));
-    } else if(s == 4) {
-      printf("%d\n", find(root, a));
-    } else if(s == 5) {
-      printf("%d\n", find(root, rnk(root, a) - 1));
-    } else {
-      printf("%d\n", find(root, rnk(root, a + 1)));
-    }
+    if(s == 1) insert(root, a);
+    if(s == 2) erase(root, a);
+    if(s == 3) printf("%d\n", rnk(root, a));
+    if(s == 4) printf("%d\n", kth(root, a));
+    if(s == 5) printf("%d\n", kth(root, rnk(root, a) - 1));
+    if(s == 6) printf("%d\n", kth(root, rnk(root, a + 1)));
   }
   return 0;
 }
