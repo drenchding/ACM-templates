@@ -1,5 +1,5 @@
 namespace Trie {
-  const int LEN = 31;
+  const int LEN = 20;
   struct Node *null;
   struct Node {
     int val;
@@ -8,14 +8,17 @@ namespace Trie {
       val = 0;
       ch[0] = ch[1] = null;
     }
+    bool isNull() {
+      return !ch[0];
+    }
   }pool[MAXN * LEN], *root;
-  int d[LEN], res, segNode;
+  int d[LEN], res, cnt;
   Node *newNode() {
-    pool[segNode].init();
-    return &pool[segNode++];
+    pool[cnt].init();
+    return &pool[cnt++];
   }
   void clear() { 
-    segNode = 0;  
+    cnt = 0;  
     null = newNode();
     null->ch[0] = NULL;
     root = null;
@@ -27,19 +30,34 @@ namespace Trie {
     }
   }
   void add(Node *&cur, int deep, int v) {
-    if(!cur->ch[0]) cur = newNode();
+    if(cur->isNull()) cur = newNode();
     cur->val += v;
     if(deep == LEN) return;
     add(cur->ch[d[deep]], deep + 1, v);
   }
   void maxXor(Node *cur, int deep) {
     if(deep == LEN) return;
+    if(cur->isNull()) return;
     int bit = d[deep];
-    if(cur->ch[bit ^ 1]->val) {
+    int v = cur->ch[bit ^ 1]->val;
+    if(v) {
       res += (1 << (LEN - deep - 1));
       maxXor(cur->ch[bit ^ 1], deep + 1);
-    } else if(cur->ch[bit]->val) {
+    } else {
       maxXor(cur->ch[bit], deep + 1);
+    }
+  }
+  void xorMex(Node *cur, int deep) {
+    if(deep == LEN) return;
+    if(cur->isNull()) return;
+    int bit = d[deep];
+    int v = cur->ch[bit]->val;
+    int size = (1 << (LEN - deep - 1));
+    if(v < size) {
+      xorMex(cur->ch[bit], deep + 1);
+    } else {
+      res += (1 << (LEN - deep - 1));
+      xorMex(cur->ch[bit ^ 1], deep + 1);
     }
   }
   void add(int val) {
@@ -50,7 +68,12 @@ namespace Trie {
   }
   int maxXor(int val) {
     pre(val); res = 0;
-    if(root) maxXor(root, 0);
+    maxXor(root, 0);
+    return res;
+  }
+  int xorMex(int val) { // 要先去重
+    pre(val); res = 0;
+    xorMex(root, 0);
     return res;
   }
 }
