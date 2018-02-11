@@ -1,82 +1,125 @@
 #include <cmath>
-#include <cstdio>
-#include <iostream>
+#include <vector>
+
 using namespace std;
-typedef long long ll;
-const int MAXN = 262144;
-const double PI = M_PI;
-int g[MAXN];
-struct Complex {    
-    double a, b;    
-    Complex() {}    
-    Complex(double A, double B) : a(A), b(B){}
-    void operator+=(const Complex & x) {    
-        a += x.a;  
-        b += x.b;  
+
+namespace FFT {
+  const double PI = acos(-1);
+
+  struct Comp {
+    double x, y;
+    Comp(double X = 0, double Y = 0): x(X), y(Y) { }
+    friend Comp operator+(const Comp & a, const Comp & b) {
+      return Comp(a.x + b.x, a.y + b.y);
     }
-    Complex operator-(const Complex & x) const {
-        return Complex(a - x.a, b - x.b);    
+    friend Comp operator-(const Comp & a, const Comp & b) {
+      return Comp(a.x - b.x, a.y - b.y);
     }
-    Complex operator*(const Complex & x) const {
-        return Complex(a * x.a - b * x.b, a * x.b + b * x.a);    
+    friend Comp operator*(const Comp & a, const Comp & b) {
+      return Comp(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
     }
-    void operator*=(const Complex & x) {
-        *this = (*this) * x;    
+  };
+
+  typedef vector<Comp> Poly;
+
+  void dft(Poly & a, int f) {
+    int n = a.size();
+    for(int i = 0, j = 0; i < n; i++) {
+      if(i > j) swap(a[i], a[j]);
+      for(int k = n >> 1; (j ^= k) < k; k >>= 1);
     }
-    Complex operator+(const Complex & x) {
-        Complex re = *this;  
-        re += x; return re;  
-    }
-}a[MAXN], b[MAXN], c[MAXN];
-void DFT(Complex *a, int f, int N) {
-    for(int i = 0; i < N; i++) {
-        if(g[i] > i) {
-            swap(a[i], a[g[i]]);
+    for(int i = 1; i < n; i <<= 1) {
+      Comp e(cos(PI / i), f * sin(PI / i));
+      for(int j = 0; j < n; j += (i << 1)) {
+        Comp w(1, 0);
+        for(int k = 0; k < i; k++, w = w * e) {
+          Comp x = a[j + k], y = w * a[i + j + k];
+          a[j + k] = x + y, a[i + j + k] = x - y;
         }
+      }
     }
-    for(int i = 1; i < N; i <<= 1) {
-        Complex e(cos(PI / i), f * sin(PI / i));
-        for(int j = 0; j < N; j += i << 1) {
-            Complex w(1, 0);
-            for(int k = 0; k < i; k++, w *= e) {
-                Complex x = a[j + k];
-                Complex y = w * a[j + k + i];
-                a[j + k] = x + y; 
-                a[j + k + i] = x - y;
-            }
+    if(f == -1) for(int i = 0; i < n; i++) {
+      a[i].x /= n, a[i].y /= n;
+    }
+  }
+
+  void conv(Poly & a, Poly & b, Poly & c) {
+    int t = -1, n = a.size() + b.size() - 2;
+    while(n >= (1 << (t + 1))) t++;
+    n = (1 << (t + 1));
+    a.resize(n); b.resize(n); c.resize(n);
+    dft(a, 1); dft(b, 1);
+    for(int i = 0; i < n; i++) c[i] = a[i] * b[i];
+    dft(c, -1);
+  }
+}
+
+namespace NTT {
+  typedef long long ll;
+  typedef vector<int> Poly;
+
+  /*
+  MOD = 167772161, R: 5, DEG: 25, G: 3
+  MOD = 469762049, R: 7, DEG: 26, G: 3
+  MOD = 754974721, R: 45, DEG: 24, G: 11
+  MOD = 998244353, R: 119, DEG: 23, G: 3
+  MOD = 1107296257, R: 33, DEG: 25, G: 10
+  MOD = 99857989633, R: 93, DEG: 30, G: 2
+  MOD = 110595407873, R: 103, DEG: 30, G: 2
+  MOD = 970662608897, R: 113, DEG: 33, G: 2
+  MOD = 1009317314561, R: 235, DEG: 32, G: 2
+  MOD = 12025908428801, R: 175, DEG: 36, G: 2
+  MOD = 98406290685953, R: 179, DEG: 39, G: 2
+  MOD = 106652627894273, R: 97, DEG: 40, G: 2
+  */
+
+  const int R = 119, DEG = 23, G = 3;
+  const int MOD = R * (1 << DEG) + 1;
+
+  int fexp(int a, int b) {
+    int res = 1;
+    for(int i = 1; i <= b; i <<= 1) {
+      if(i & b) res = res * (ll)a % MOD;
+      a = a * (ll)a % MOD;
+    }
+    return res;
+  }
+
+  void dft(Poly & a, int f) {
+    int n = a.size();
+    for(int i = 0, j = 0; i < n; i++) {
+      if(i > j) swap(a[i], a[j]);
+      for(int k = n >> 1; (j ^= k) < k; k >>= 1);
+    }
+    int g = fexp(G, R);
+    for(int i = 1, b = 1; i < n; i <<= 1, b++) {
+      int e = fexp(g, 1 << (DEG - b));
+      if(f < 0) e = fexp(e, MOD - 2);
+      for(int j = 0; j < n; j += i << 1) {
+        int w = 1;
+        for(int k = 0; k < i; k++, w = w * (ll)e % MOD) {
+          int x = a[j + k], y = w * (ll)a[j + k + i] % MOD;
+          a[j + k] = x + y, a[j + k + i] = x - y;
+          if(a[j + k] >= MOD) a[j + k] -= MOD;
+          if(a[j + k + i] < 0) a[j + k + i] += MOD;
         }
+      }
     }
-    if(f != 1) for(int i = 0; i < N; i++) {
-        a[i].a /= N;
+    if(f < 0) {
+      int v = fexp(n, MOD - 2);
+      for(int i = 0; i < n; i++) {
+        a[i] = a[i] * (ll)v % MOD;
+      }
     }
-}
-void FFT(Complex *a, Complex *b, int n) {
-    int t = -1, N;
-    for(N = 1; N <= n; N <<= 1, t++);
-    for(int i = 1; i < N; i++) {
-        g[i] = (g[i >> 1] >> 1) | ((i & 1) << t);
-    }
-    DFT(a, 1, N); DFT(b, 1, N);
-    for(int i = 0; i < N; i++) {
-        c[i] = a[i] * b[i];
-    }
-    DFT(c, -1, N);
-}
-int main() {
-    int n, m;
-    scanf("%d %d", &n, &m);
-    for(int i = 0; i <= n; i++) {
-        int x; scanf("%d", &x);
-        a[i] = Complex((double)x, 0);
-    }
-    for(int i = 0; i <= m; i++) {
-        int x; scanf("%d", &x);
-        b[i] = Complex((double)x, 0);
-    }
-    FFT(a, b, n + m);
-    for(int i = 0; i <= n + m; i++) {
-        printf("%d ", (int)(c[i].a + 0.5));
-    }
-    putchar('\n');
-    return 0;
+  }
+
+  void conv(Poly & a, Poly & b, Poly & c) {
+    int t = -1, n = a.size() + b.size() - 2;
+    while(n >= (1 << (t + 1))) t++;
+    n = (1 << (t + 1));
+    a.resize(n); b.resize(n); c.resize(n);
+    dft(a, 1); dft(b, 1);
+    for(int i = 0; i < n; i++) c[i] = a[i] * (ll)b[i] % MOD;
+    dft(c, -1);
+  }
 }
