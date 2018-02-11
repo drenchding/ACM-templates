@@ -1,56 +1,84 @@
 #include <cmath>
 #include <vector>
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
 
 using namespace std;
 
 namespace FFT {
   const double PI = acos(-1);
-
+  
+  typedef vector<long long> Poly;
+  
   struct Comp {
     double x, y;
     Comp(double X = 0, double Y = 0): x(X), y(Y) { }
-    friend Comp operator+(const Comp & a, const Comp & b) {
-      return Comp(a.x + b.x, a.y + b.y);
-    }
-    friend Comp operator-(const Comp & a, const Comp & b) {
-      return Comp(a.x - b.x, a.y - b.y);
-    }
-    friend Comp operator*(const Comp & a, const Comp & b) {
-      return Comp(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-    }
-  };
+  }*w;
 
-  typedef vector<Comp> Poly;
+  Comp operator+(const Comp & a, const Comp & b) {
+    return Comp(a.x + b.x, a.y + b.y);
+  }
+  Comp operator-(const Comp & a, const Comp & b) {
+    return Comp(a.x - b.x, a.y - b.y);
+  }
+  Comp operator*(const Comp & a, const Comp & b) {
+    return Comp(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+  }
+  Comp operator!(const Comp & a) {
+    return Comp(a.x, -a.y);
+  }
 
-  void dft(Poly & a, int f) {
-    int n = a.size();
+  void dft(Comp *a, int n) {
     for(int i = 0, j = 0; i < n; i++) {
       if(i > j) swap(a[i], a[j]);
       for(int k = n >> 1; (j ^= k) < k; k >>= 1);
     }
-    for(int i = 1; i < n; i <<= 1) {
-      Comp e(cos(PI / i), f * sin(PI / i));
-      for(int j = 0; j < n; j += (i << 1)) {
-        Comp w(1, 0);
-        for(int k = 0; k < i; k++, w = w * e) {
-          Comp x = a[j + k], y = w * a[i + j + k];
-          a[j + k] = x + y, a[i + j + k] = x - y;
+    for(int i = 2, b = n >> 1; i <= n; i <<= 1, b >>= 1) {
+      for(int j = 0; j < n; j += i) {
+        Comp *l = a + j, *r = a + j + (i >> 1), *p = w;
+        for(int k = 0; k < (i >> 1); k++) {
+          Comp t = *r * *p;
+          *r = *l - t, *l = *l + t;
+          l++, r++, p += b;
         }
       }
     }
-    if(f == -1) for(int i = 0; i < n; i++) {
-      a[i].x /= n, a[i].y /= n;
-    }
   }
 
-  void conv(Poly & a, Poly & b, Poly & c) {
-    int t = -1, n = a.size() + b.size() - 2;
-    while(n >= (1 << (t + 1))) t++;
-    n = (1 << (t + 1));
-    a.resize(n); b.resize(n); c.resize(n);
-    dft(a, 1); dft(b, 1);
-    for(int i = 0; i < n; i++) c[i] = a[i] * b[i];
-    dft(c, -1);
+  void conv(Poly & x, Poly & y, Poly & z) {
+    if(x.size() == 1 && y.size() == 1) {
+      z.resize(1); z[0] = x[0] * y[0]; return;
+    }
+    int t = 0, n = x.size() + y.size() - 1;
+    while((1 << t) < n) t++;
+    n = (1 << (--t));
+    Comp step = Comp(cos(2 * PI / n), sin(2 * PI / n));
+    Comp *a = new Comp[n], *b = new Comp[n], *c = new Comp[n];
+    w = new Comp[n];
+    w[0] = Comp(1, 0);
+    for(int i = 0; i < n - 1; i++) w[i + 1] = w[i] * step;
+    for(int i = 0; i < n; i++) {
+      a[i].x = (i << 1) < x.size() ? x[i << 1] : 0;
+      b[i].x = (i << 1) < y.size() ? y[i << 1] : 0;
+      a[i].y = (i << 1 | 1) < x.size() ? x[i << 1 | 1] : 0;
+      b[i].y = (i << 1 | 1) < y.size() ? y[i << 1 | 1] : 0;
+    }
+    dft(a, n); dft(b, n);
+    for(int i = 0; i < n; i++) {
+      int j = (n - i) & (n - 1);
+      c[i] = (Comp(4, 0) * !(a[j] * b[j]) - 
+             (!a[j] - a[i]) * (!b[j] - b[i]) * 
+             (w[i] + Comp(1, 0))) * Comp(0, 0.25);
+    }
+    reverse(w + 1, w + n); dft(c, n);
+    int d = ((x.size() + y.size() - 1) >> 1) + 1;
+    z.resize(d << 1);
+    for(int i = 0; i < d; i++) {
+      z[i << 1] = c[i].y / n + 0.5;
+      z[i << 1 | 1] = c[i].x / n + 0.5;
+    }
+    delete[] w; delete[] a; delete[] b; delete[] c;
   }
 }
 
