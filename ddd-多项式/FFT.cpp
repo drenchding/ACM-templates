@@ -8,27 +8,26 @@ using namespace std;
 
 namespace FFT {
   const double PI = acos(-1);
-  
-  typedef vector<long long> Poly;
-  
+   
+  typedef vector<int> Poly;
+   
   struct Comp {
     double x, y;
     Comp(double X = 0, double Y = 0): x(X), y(Y) { }
+    friend Comp operator+(const Comp & a, const Comp & b) {
+      return Comp(a.x + b.x, a.y + b.y);
+    }
+    friend Comp operator-(const Comp & a, const Comp & b) {
+      return Comp(a.x - b.x, a.y - b.y);
+    }
+    friend Comp operator*(const Comp & a, const Comp & b) {
+      return Comp(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+    }
+    friend Comp operator!(const Comp & a) {
+      return Comp(a.x, -a.y);
+    }
   }*w;
-
-  Comp operator+(const Comp & a, const Comp & b) {
-    return Comp(a.x + b.x, a.y + b.y);
-  }
-  Comp operator-(const Comp & a, const Comp & b) {
-    return Comp(a.x - b.x, a.y - b.y);
-  }
-  Comp operator*(const Comp & a, const Comp & b) {
-    return Comp(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-  }
-  Comp operator!(const Comp & a) {
-    return Comp(a.x, -a.y);
-  }
-
+ 
   void dft(Comp *a, int n) {
     for(int i = 0, j = 0; i < n; i++) {
       if(i > j) swap(a[i], a[j]);
@@ -45,7 +44,7 @@ namespace FFT {
       }
     }
   }
-
+ 
   void conv(Poly & x, Poly & y, Poly & z) {
     if(x.size() == 1 && y.size() == 1) {
       z.resize(1); z[0] = x[0] * y[0]; return;
@@ -81,11 +80,11 @@ namespace FFT {
     delete[] w; delete[] a; delete[] b; delete[] c;
   }
 }
-
+ 
 namespace NTT {
   typedef long long ll;
   typedef vector<int> Poly;
-
+ 
   /*
   MOD = 167772161, R: 5, DEG: 25, G: 3
   MOD = 469762049, R: 7, DEG: 26, G: 3
@@ -100,10 +99,10 @@ namespace NTT {
   MOD = 98406290685953, R: 179, DEG: 39, G: 2
   MOD = 106652627894273, R: 97, DEG: 40, G: 2
   */
-
+ 
   const int R = 119, DEG = 23, G = 3;
   const int MOD = R * (1 << DEG) + 1;
-
+ 
   int fexp(int a, int b) {
     int res = 1;
     for(int i = 1; i <= b; i <<= 1) {
@@ -112,7 +111,7 @@ namespace NTT {
     }
     return res;
   }
-
+ 
   void dft(Poly & a, int f) {
     int n = a.size();
     for(int i = 0, j = 0; i < n; i++) {
@@ -140,7 +139,7 @@ namespace NTT {
       }
     }
   }
-
+ 
   void conv(Poly & a, Poly & b, Poly & c) {
     int t = -1, n = a.size() + b.size() - 2;
     while(n >= (1 << (t + 1))) t++;
