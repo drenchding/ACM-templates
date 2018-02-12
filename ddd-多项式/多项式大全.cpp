@@ -8,11 +8,10 @@
 using namespace std;
 
 typedef long long ll;
+typedef vector<int> Poly;
 
 namespace FFT {
   const double PI = acos(-1);
-   
-  typedef vector<int> Poly;
    
   struct Comp {
     double x, y;
@@ -88,8 +87,6 @@ namespace MTT {
   const double PI = acos(-1);
   const int MOD = 1e9 + 7;
   
-  typedef vector<int> Poly;
-   
   struct Comp {
     double x, y;
     Comp(double X = 0, double Y = 0): x(X), y(Y) { }
@@ -172,8 +169,6 @@ namespace MTT {
 }
  
 namespace NTT {
-  typedef vector<int> Poly;
- 
   /*
   MOD = 167772161, R: 5, DEG: 25, G: 3
   MOD = 469762049, R: 7, DEG: 26, G: 3
@@ -188,10 +183,11 @@ namespace NTT {
   MOD = 98406290685953, R: 179, DEG: 39, G: 2
   MOD = 106652627894273, R: 97, DEG: 40, G: 2
   */
- 
   const int R = 119, DEG = 23, G = 3;
   const int MOD = R * (1 << DEG) + 1;
- 
+
+  int *w;
+
   int fexp(int a, int b) {
     int res = 1;
     for(int i = 1; i <= b; i <<= 1) {
@@ -201,41 +197,45 @@ namespace NTT {
     return res;
   }
  
-  void dft(Poly & a, int f) {
+  void dft(Poly & a) {
     int n = a.size();
     for(int i = 0, j = 0; i < n; i++) {
       if(i > j) swap(a[i], a[j]);
       for(int k = n >> 1; (j ^= k) < k; k >>= 1);
     }
-    int g = fexp(G, R);
-    for(int i = 1, b = 1; i < n; i <<= 1, b++) {
-      int e = fexp(g, 1 << (DEG - b));
-      if(f < 0) e = fexp(e, MOD - 2);
-      for(int j = 0; j < n; j += i << 1) {
-        int w = 1;
-        for(int k = 0; k < i; k++, w = w * (ll)e % MOD) {
-          int x = a[j + k], y = w * (ll)a[j + k + i] % MOD;
-          a[j + k] = x + y, a[j + k + i] = x - y;
-          if(a[j + k] >= MOD) a[j + k] -= MOD;
-          if(a[j + k + i] < 0) a[j + k + i] += MOD;
+    for(int i = 1, b = n >> 1; i < n; i <<= 1, b >>= 1) {
+      for(int j = 0; j < n; j += (i << 1)) {
+        for(int k = 0; k < i; k++) {
+          int s = a[j + k], t = a[j + k + i] * (ll)w[b * k] % MOD;
+          a[j + k] = s + t, a[j + k + i] = s - t;
+          if(a[j + k] > MOD) a[j + k] -= MOD;
+          if(a[j + k + i] < 0) a[j + k + i] += MOD; 
         }
-      }
-    }
-    if(f < 0) {
-      int v = fexp(n, MOD - 2);
-      for(int i = 0; i < n; i++) {
-        a[i] = a[i] * (ll)v % MOD;
       }
     }
   }
  
   void conv(Poly & a, Poly & b, Poly & c) {
-    int t = -1, n = a.size() + b.size() - 2;
-    while(n >= (1 << (t + 1))) t++;
-    n = (1 << (t + 1));
+    int t = 0, n = a.size() + b.size() - 1;
+    while((1 << t) < n) t++;
+    n = (1 << t);
     a.resize(n); b.resize(n); c.resize(n);
-    dft(a, 1); dft(b, 1);
-    for(int i = 0; i < n; i++) c[i] = a[i] * (ll)b[i] % MOD;
-    dft(c, -1);
+    int step = fexp(G, (MOD - 1) / n);
+    w = new int[n];
+    w[0] = 1;
+    for(int i = 1; i < n; i++) {
+      w[i] = w[i - 1] * (ll)step % MOD;
+    }
+    dft(a); dft(b);
+    for(int i = 0; i < n; i++) {
+      c[i] = a[i] * (ll)b[i] % MOD;
+    }
+    reverse(w + 1, w + n);
+    dft(c);
+    int inv = fexp(n, MOD - 2);
+    for(int i = 0; i < n; i++) {
+      c[i] = c[i] * (ll)inv % MOD;
+    }
+    delete[] w;
   }
 }
