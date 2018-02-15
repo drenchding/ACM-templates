@@ -252,9 +252,9 @@ namespace NTT {
 }
 
 namespace Newton {
-  using namespace NTT;
+  using namespace MTT;
 
-  void getInv(Poly a, Poly & b, int N) {
+  void getInv(Poly a, Poly & b, int N) { // a * b = 1 (mod x ^ N)
     if(N == 1) {
       b.resize(1);
       b[0] = fexp(a[0], MOD - 2);
@@ -271,5 +271,20 @@ namespace Newton {
       conv(b, c, b);
       b.resize(N);
     }
+  }
+
+  void getBernoulli(Poly & a, int N) { // get Bernoulli Number [0, N]
+    Poly F(N + 1);
+    vector<int> fac(N + 2);
+    fac[0] = 1;
+    for(int i = 0; i <= N; i++) {
+      fac[i + 1] = fac[i] * (ll)(i + 1) % MOD;
+      F[i] = fexp(fac[i + 1], MOD - 2);
+    }
+    getInv(F, a, N + 1);
+    for(int i = 0; i <= N; i++) {
+      a[i] = a[i] * (ll)fac[i] % MOD;
+    }
+    a[1] = MOD - a[1];
   }
 }
