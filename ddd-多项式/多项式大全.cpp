@@ -47,7 +47,7 @@ namespace FFT {
     }
   }
 
-  void conv(Poly & x, Poly & y, Poly & z) {
+  void conv(Poly x, Poly y, Poly & z) {
     if(x.size() == 1 && y.size() == 1) {
       z.resize(1); z[0] = x[0] * y[0]; return;
     }
@@ -104,6 +104,15 @@ namespace MTT {
     }
   }*w;
 
+  int fexp(int a, int b) {
+    int res = 1;
+    for(int i = 1; i <= b; i <<= 1) {
+      if(i & b) res = res * (ll)a % MOD;
+      a = a * (ll)a % MOD;
+    }
+    return res;
+  }
+
   void dft(Comp *a, int n) {
     for(int i = 0, j = 0; i < n; i++) {
       if(i > j) swap(a[i], a[j]);
@@ -121,7 +130,7 @@ namespace MTT {
     }
   }
 
-  void conv(Poly & x, Poly & y, Poly & z) {
+  void conv(Poly x, Poly y, Poly & z) {
     int t = 0, n = x.size() + y.size() - 1;
     while((1 << t) < n) t++;
     n = (1 << t);
@@ -214,28 +223,53 @@ namespace NTT {
       }
     }
   }
- 
-  void conv(Poly & a, Poly & b, Poly & c) {
-    int t = 0, n = a.size() + b.size() - 1;
-    while((1 << t) < n) t++;
-    n = (1 << t);
-    a.resize(n); b.resize(n); c.resize(n);
+
+  void prepare(int n) {
     int step = fexp(G, (MOD - 1) / n);
     w = new int[n];
     w[0] = 1;
     for(int i = 1; i < n; i++) {
       w[i] = w[i - 1] * (ll)step % MOD;
     }
-    dft(a); dft(b);
+  }
+
+  void conv(Poly a, Poly b, Poly & c) {
+    int t = 0, n = a.size() + b.size() - 1;
+    while((1 << t) < n) t++;
+    n = (1 << t);
+    a.resize(n); b.resize(n); c.resize(n);
+    prepare(n); dft(a); dft(b);
     for(int i = 0; i < n; i++) {
       c[i] = a[i] * (ll)b[i] % MOD;
     }
-    reverse(w + 1, w + n);
-    dft(c);
+    reverse(w + 1, w + n); dft(c);
     int inv = fexp(n, MOD - 2);
     for(int i = 0; i < n; i++) {
       c[i] = c[i] * (ll)inv % MOD;
     }
     delete[] w;
+  }
+}
+
+namespace Newton {
+  using namespace NTT;
+
+  void getInv(Poly a, Poly & b, int N) {
+    if(N == 1) {
+      b.resize(1);
+      b[0] = fexp(a[0], MOD - 2);
+    } else {
+      a.resize(N);
+      getInv(a, b, (N + 1) / 2);
+      Poly c;
+      conv(a, b, c);
+      c.resize(N);
+      for(int i = 0; i < N; i++) {
+        c[i] = (MOD - c[i]) % MOD;
+      }
+      c[0] = (c[0] + 2) % MOD;
+      conv(b, c, b);
+      b.resize(N);
+    }
   }
 }
