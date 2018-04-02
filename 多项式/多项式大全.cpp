@@ -1,3 +1,5 @@
+// https://www.zybuluo.com/Drench/note/774721
+
 #include <cmath>
 #include <vector>
 #include <cstdio>
