@@ -12,7 +12,16 @@
 
 typedef vector<vector<int> > Mat;
 
-int det(Mat mat) {
+int fexp(int a, int b) {
+  int res = 1;
+  for(int i = 1; i <= b; i <<= 1) {
+    if(i & b) res = 1LL * res * a % MOD;
+    a = 1LL * a * a % MOD;
+  }
+  return res;
+}
+
+int det(Mat mat) { // 传入一个 Mat，返回一个 int，表示行列式的值
   int n = mat.size(), res = 1;
   for(int j = 0; j < n; j++) {
     for(int i = j + 1; i < n && !mat[j][j]; i++) if(mat[i][j]) {
@@ -34,15 +43,14 @@ int det(Mat mat) {
   return (res + MOD) % MOD;
 }
 
-Mat getInv(Mat mat) {
+Mat getInv(Mat mat) { // 传入一个 Mat，返回一个 Mat，表示逆矩阵
   int n = mat.size();
   Mat inv(n, vector<int>(n));
   for(int i = 0; i < n; i++) inv[i][i] = 1;
   for(int j = 0; j < n; j++) {
     for(int i = j + 1; i < n && !mat[j][j]; i++) if(mat[i][j]) {
       for(int k = 0; k < n; k++) {
-        swap(mat[i][k], mat[j][k]);
-        swap(inv[i][k], inv[j][k]);
+        swap(mat[i][k], mat[j][k]); swap(inv[i][k], inv[j][k]);
       }
     }
     for(int i = j + 1; i < n; i++) {
@@ -61,30 +69,33 @@ Mat getInv(Mat mat) {
         int base = 1LL * mat[j][j] * fexp(mat[i][j], MOD - 2) % MOD;
         for(int k = 0; k < n; k++) {
           mat[i][k] = (1LL * mat[i][k] * base % MOD - mat[j][k] + MOD) % MOD;
-          inv[i][k] = (1LL * mat[i][k] * base % MOD - inv[j][k] + MOD) % MOD;
+          inv[i][k] = (1LL * inv[i][k] * base % MOD - inv[j][k] + MOD) % MOD;
         }
       }
     }
   }
   for(int i = 0; i < n; i++) {
-    inv[i][i] = 1LL * inv[i][i] * fexp(mat[i][i], MOD - 2) % MOD;
-    mat[i][i] = 1;
+    int base = fexp(mat[i][i], MOD - 2);
+    for(int k = 0; k < n; k++) {
+      inv[i][k] = 1LL * inv[i][k] * base % MOD;
+      mat[i][k] = 1LL * mat[i][k] * base % MOD;
+    }
   }
   return inv;
 }
 
-Mat getAdj(Mat mat) {
+Mat getAdj(Mat mat) { // 传入一个 Mat，返回一个 Mat，表示伴随矩阵
   Mat adj = getInv(mat);
   int v = det(mat), n = mat.size();
   for(int i = 0; i < n; i++) {
     for(int j = 0; j < n; j++) {
-      adj[i][j] *= v;
+      adj[i][j] = 1LL * adj[i][j] * v % MOD;
     }
   }
   return adj;
 }
 
-Mat mul(const Mat & a, const Mat & b) {
+Mat mul(const Mat & a, const Mat & b) { // 矩阵相乘
   assert(a[0].size() == b.size());
   int x = a.size(), y = b[0].size();
   Mat res(x, vector<int>(y));
@@ -98,7 +109,7 @@ Mat mul(const Mat & a, const Mat & b) {
   return res;
 }
 
-Mat fexp(Mat a, ll x) {
+Mat fexp(Mat a, ll x) { // 矩阵快速幂
   Mat res(a.size(), vector<int>(a.size()));
   for(int i = 0; i < a.size(); i++) res[i][i] = 1;
   while(x) {
