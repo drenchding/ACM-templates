@@ -17,8 +17,8 @@ struct BigNumber {
   }
   BigNumber operator<<(int x) const {
   	BigNumber t = *this;
-  	while(x > 100) mul2(100), x -= 100;
-  	mul2(x);
+  	while(x > 100) t.mul2(100), x -= 100;
+  	t.mul2(x); return t;
   }
   bool operator<(const BigNumber & rhs) const {
     if(a == rhs.a) return b < rhs.b;
