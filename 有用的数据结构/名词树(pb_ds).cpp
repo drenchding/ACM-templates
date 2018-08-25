@@ -8,7 +8,7 @@ struct BBT {
   typedef int DATA;
   typedef tree<pair<DATA, int>, null_type, less<pair<DATA, int> >, rb_tree_tag, 
           tree_order_statistics_node_update> BST;
-  map<int, int> M;
+  map<DATA, int> M;
   BST B;
   size_t size() {
     return B.size();
