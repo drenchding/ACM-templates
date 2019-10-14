@@ -1,10 +1,10 @@
 struct BigNumber {
-	typedef unsigned __int128 lll;
+  typedef unsigned __int128 lll;
   lll a, b;
   BigNumber(): a(0), b(0) { }
   BigNumber(int x): a(0), b(x) { }
   void mul2(int x) {
-  	if(x == 0) return;
+    if(x == 0) return;
     a <<= x;
     lll tmpB = b >> (128 - x);
     a |= tmpB; b <<= x;
@@ -16,9 +16,9 @@ struct BigNumber {
     b += rhs.b;
   }
   BigNumber operator<<(int x) const {
-  	BigNumber t = *this;
-  	while(x > 100) t.mul2(100), x -= 100;
-  	t.mul2(x); return t;
+    BigNumber t = *this;
+    while(x > 100) t.mul2(100), x -= 100;
+    t.mul2(x); return t;
   }
   bool operator<(const BigNumber & rhs) const {
     if(a == rhs.a) return b < rhs.b;
