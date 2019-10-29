@@ -150,7 +150,7 @@ void make_ans() {
 void print_ans() {
   for(int i = 0; i < m; ++i)
     if(ans[i] > n) ans[i] = n;
-    printf("%d\n", ans[i]);
+  printf("%d\n", ans[i]);
 }
 int main() {
   read();
